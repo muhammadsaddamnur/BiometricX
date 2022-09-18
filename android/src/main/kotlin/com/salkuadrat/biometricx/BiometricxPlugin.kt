@@ -1,6 +1,7 @@
 package com.salkuadrat.biometricx
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.annotation.NonNull
@@ -99,6 +100,8 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private fun encrypt(@NonNull call: MethodCall, @NonNull result: Result) {
         val params = call.arguments as Map<String, String>
         val userAuthenticationRequired = params["user_authentication_required"] as Boolean
+        val returnCipher = params["return_cipher"] as Boolean
+        val storeSharedPreferences = params["store_shared_references"] as Boolean
         val tag = params["tag"] as String
         val messageKey = params["message_key"] as String
         val message = params["message"] as String
@@ -135,15 +138,38 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                             }
                             val ciphertext = cryptoManager.encryptData(message, cipher)
 
-                            cryptoManager.saveCiphertext(
-                                context,
-                                ciphertext,
-                                SHARED_PREFS_NAME,
-                                Context.MODE_PRIVATE,
-                                resultKey
-                            )
+                            if (storeSharedPreferences) {
+                                /// save ciphertext
+                                cryptoManager.saveCiphertext(
+                                    context,
+                                    ciphertext,
+                                    SHARED_PREFS_NAME,
+                                    Context.MODE_PRIVATE,
+                                    resultKey
+                                )
+                            } else {
+                                /// save iv
+                                context.getSharedPreferences(
+                                    SHARED_PREFS_NAME,
+                                    Context.MODE_PRIVATE
+                                ).edit().putString(
+                                    tag, Base64.encodeToString(
+                                        ciphertext.initializationVector,
+                                        Base64.NO_WRAP
+                                    )
+                                ).apply()
+                            }
 
-                            result.success(resultKey)
+                            if (returnCipher) {
+                                result.success(
+                                    Base64.encodeToString(
+                                        ciphertext.ciphertext,
+                                        Base64.NO_WRAP
+                                    )
+                                )
+                            } else {
+                                result.success(resultKey)
+                            }
                         } ?: run {
                             failed(result)
                         }
@@ -162,16 +188,33 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     else -> messageKey
                 }
                 val ciphertext = cryptoManager.encryptData(message, cipher)
+                if (storeSharedPreferences) {
+                    /// save ciphertext
+                    cryptoManager.saveCiphertext(
+                        context,
+                        ciphertext,
+                        SHARED_PREFS_NAME,
+                        Context.MODE_PRIVATE,
+                        resultKey
+                    )
+                } else {
+                    /// save iv
+                    context.getSharedPreferences(
+                        SHARED_PREFS_NAME,
+                        Context.MODE_PRIVATE
+                    ).edit().putString(
+                        tag, Base64.encodeToString(
+                            ciphertext.initializationVector,
+                            Base64.NO_WRAP
+                        )
+                    ).apply()
+                }
 
-                cryptoManager.saveCiphertext(
-                    context,
-                    ciphertext,
-                    SHARED_PREFS_NAME,
-                    Context.MODE_PRIVATE,
-                    resultKey
-                )
-
-                result.success(resultKey)
+                if (returnCipher) {
+                    result.success(Base64.encodeToString(ciphertext.ciphertext, Base64.NO_WRAP))
+                } else {
+                    result.success(resultKey)
+                }
             }
 
         } catch (ex: Exception) {
@@ -182,6 +225,8 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private fun decrypt(@NonNull call: MethodCall, @NonNull result: Result) {
         val params = call.arguments as Map<String, String>
         val userAuthenticationRequired = params["user_authentication_required"] as Boolean
+        val cipherT = params["cipher_text"] as String
+        val storeSharedPreferences = params["store_shared_preferences"] as Boolean
         val tag = params["tag"] as String
         val messageKey = params["message_key"] as String
         val title = params["title"] as String
@@ -191,12 +236,19 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val confirmationRequired = params["confirmation_required"] as Boolean
         val deviceCredentialAllowed = params["device_credential_allowed"] as Boolean
 
-        val ciphertext = cryptoManager.restoreCiphertext(
-            context,
-            SHARED_PREFS_NAME,
-            Context.MODE_PRIVATE,
-            messageKey
-        )
+        val ciphertext: Ciphertext? = if (storeSharedPreferences) {
+            cryptoManager.restoreCiphertext(
+                context,
+                SHARED_PREFS_NAME,
+                Context.MODE_PRIVATE,
+                messageKey
+            )
+        } else {
+            val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE).getString(tag, null)
+            Ciphertext(Base64.decode(cipherT, Base64.DEFAULT), Base64.decode(iv, Base64.DEFAULT))
+        }
+
+
         if (userAuthenticationRequired) {
             ciphertext?.initializationVector?.let { iv ->
                 try {

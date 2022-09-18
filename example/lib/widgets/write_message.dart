@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:biometricx/biometricx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_styled_toast/flutter_styled_toast.dart';
@@ -26,7 +28,9 @@ class _WriteMessageState extends State<WriteMessage> {
     }
 
     final result = await BiometricX.encrypt(
-      userAuthenticationRequired: true,
+      userAuthenticationRequired: false,
+      returnCipher: true,
+      storeSharedPreferences: false,
       tag: app.tag,
       message: message,
       title: 'Biometric Permission',
@@ -35,7 +39,7 @@ class _WriteMessageState extends State<WriteMessage> {
 
     if (result.isSuccess && result.hasData) {
       final messageKey = result.data!;
-
+      log(messageKey);
       await messages.add(messageKey);
       app.showList();
       return;
