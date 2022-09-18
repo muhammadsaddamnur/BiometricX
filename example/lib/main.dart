@@ -7,6 +7,8 @@ import 'states/states.dart';
 import 'widgets/widgets.dart';
 
 main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   await GetStorage.init();
   runApp(MultiProvider(
     providers: [

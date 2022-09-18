@@ -1,8 +1,11 @@
 package com.salkuadrat.biometricx
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.annotation.RequiresApi
 import com.google.gson.Gson
 import java.nio.charset.Charset
 import java.security.KeyStore
@@ -77,11 +80,12 @@ interface CryptoManager {
     ): Ciphertext?
 }
 
-fun CryptoManager(): CryptoManager = CryptoManagerImpl()
+fun CryptoManager(context: Context): CryptoManager = CryptoManagerImpl(context = context)
 
 data class Ciphertext(val ciphertext: ByteArray, val initializationVector: ByteArray)
 
-private class CryptoManagerImpl: CryptoManager {
+private class CryptoManagerImpl(context: Context) : CryptoManager {
+    private val context: Context = context
 
     private val KEY_SIZE = 256
     private val ANDROID_KEYSTORE = "AndroidKeyStore"
@@ -98,7 +102,7 @@ private class CryptoManagerImpl: CryptoManager {
     }
 
     override fun getInitializedCipherForDecryption(
-        keyName: String, 
+        keyName: String,
         initializationVector: ByteArray
     ): Cipher {
         val cipher = getCipher()
@@ -124,6 +128,7 @@ private class CryptoManagerImpl: CryptoManager {
         return Cipher.getInstance("$ENCRYPTION_ALGORITHM/$ENCRYPTION_BLOCK_MODE/$ENCRYPTION_PADDING")
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     private fun getSecretKey(keyName: String): SecretKey {
         // If Secretkey exist for that keyName, grab and return it.
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
@@ -132,20 +137,29 @@ private class CryptoManagerImpl: CryptoManager {
 
         // If not, generate a new one
         val keyGen = KeyGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_AES, 
+            KeyProperties.KEY_ALGORITHM_AES,
             ANDROID_KEYSTORE
         )
 
+        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+            keyName,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && context.packageManager.hasSystemFeature(
+                PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+            keyGenParameterSpec.setIsStrongBoxBacked(true)
+        }
+
+        keyGenParameterSpec.setBlockModes(ENCRYPTION_BLOCK_MODE)
+        keyGenParameterSpec.setEncryptionPaddings(ENCRYPTION_PADDING)
+        keyGenParameterSpec.setUserAuthenticationRequired(true)
+        keyGenParameterSpec.setKeySize(KEY_SIZE)
+        keyGenParameterSpec.build()
+
+
         keyGen.init(
-            KeyGenParameterSpec.Builder(
-                keyName, 
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(ENCRYPTION_BLOCK_MODE)
-                .setEncryptionPaddings(ENCRYPTION_PADDING)
-                .setUserAuthenticationRequired(true)
-                .setKeySize(KEY_SIZE)
-                .build()
+            keyGenParameterSpec.build()
         )
 
         return keyGen.generateKey()

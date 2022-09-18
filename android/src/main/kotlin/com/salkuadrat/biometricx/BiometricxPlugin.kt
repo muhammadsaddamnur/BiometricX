@@ -44,7 +44,7 @@ class BiometricxPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
         context = flutterPluginBinding.applicationContext
 
-        cryptoManager = CryptoManager()
+        cryptoManager = CryptoManager(context)
         biometricManager = BiometricManager.from(context)
         biometricHelper = BiometricHelper(context)
     }
