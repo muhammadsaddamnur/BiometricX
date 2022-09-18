@@ -42,7 +42,8 @@ class _MessageListState extends State<MessageList> {
     final messageKey = message['message_key'] as String;
 
     final result = await BiometricX.decrypt(
-      biometricKey: app.biometricKey,
+      userAuthenticationRequired: true,
+      tag: app.tag,
       messageKey: messageKey,
       title: 'Biometric Permission',
       subtitle: 'Enter biometric credentials to read this message',
@@ -70,7 +71,8 @@ class _MessageListState extends State<MessageList> {
     final messageKey = message['message_key'] as String;
 
     final result = await BiometricX.decrypt(
-      biometricKey: app.biometricKey,
+      userAuthenticationRequired: true,
+      tag: app.tag,
       messageKey: messageKey,
       title: 'Biometric Permission',
       subtitle: 'Enter biometric credentials to delete this message',

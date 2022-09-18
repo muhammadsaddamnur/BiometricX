@@ -21,7 +21,10 @@ interface CryptoManager {
      *
      * @return [Cipher]
      */
-    fun getInitializedCipherForEncryption(keyName: String): Cipher
+    fun getInitializedCipherForEncryption(
+        keyName: String,
+        userAuthenticationRequired: Boolean
+    ): Cipher
 
     /**
      * This will gets or generates an instance of SecretKey, and then initializes Cipher with the key.
@@ -29,7 +32,11 @@ interface CryptoManager {
      *
      * @return [Cipher]
      */
-    fun getInitializedCipherForDecryption(keyName: String, initializationVector: ByteArray): Cipher
+    fun getInitializedCipherForDecryption(
+        keyName: String,
+        initializationVector: ByteArray,
+        userAuthenticationRequired: Boolean
+    ): Cipher
 
     /**
      * Cipher created with [getInitializedCipherForEncryption] is used here to encrypt [message].
@@ -93,20 +100,26 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
     private val ENCRYPTION_PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
     private val ENCRYPTION_ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
 
-    override fun getInitializedCipherForEncryption(keyName: String): Cipher {
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun getInitializedCipherForEncryption(
+        keyName: String,
+        userAuthenticationRequired: Boolean
+    ): Cipher {
         val cipher = getCipher()
-        val secretKey = getSecretKey(keyName)
+        val secretKey = getSecretKey(keyName, userAuthenticationRequired)
 
         cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         return cipher
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     override fun getInitializedCipherForDecryption(
         keyName: String,
-        initializationVector: ByteArray
+        initializationVector: ByteArray,
+        userAuthenticationRequired: Boolean
     ): Cipher {
         val cipher = getCipher()
-        val secretKey = getSecretKey(keyName)
+        val secretKey = getSecretKey(keyName, userAuthenticationRequired)
 
         cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(128, initializationVector))
         return cipher
@@ -129,7 +142,7 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
-    private fun getSecretKey(keyName: String): SecretKey {
+    private fun getSecretKey(keyName: String, userAuthenticationRequired: Boolean): SecretKey {
         // If Secretkey exist for that keyName, grab and return it.
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
@@ -147,16 +160,17 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && context.packageManager.hasSystemFeature(
-                PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+                PackageManager.FEATURE_STRONGBOX_KEYSTORE
+            )
+        ) {
             keyGenParameterSpec.setIsStrongBoxBacked(true)
         }
 
         keyGenParameterSpec.setBlockModes(ENCRYPTION_BLOCK_MODE)
         keyGenParameterSpec.setEncryptionPaddings(ENCRYPTION_PADDING)
-        keyGenParameterSpec.setUserAuthenticationRequired(true)
+        keyGenParameterSpec.setUserAuthenticationRequired(userAuthenticationRequired)
         keyGenParameterSpec.setKeySize(KEY_SIZE)
         keyGenParameterSpec.build()
-
 
         keyGen.init(
             keyGenParameterSpec.build()

@@ -63,7 +63,8 @@ class BiometricX {
 
   /// Encrypt message using biometric.
   static Future<BiometricResult> encrypt({
-    required String biometricKey,
+    bool userAuthenticationRequired = true,
+    required String tag,
     required String message,
     String messageKey = '',
     String title = 'Biometric Authentication',
@@ -75,7 +76,8 @@ class BiometricX {
   }) async {
     try {
       final resultKey = await _channel.invokeMethod('encrypt', {
-        'biometric_key': biometricKey,
+        'user_authentication_required': userAuthenticationRequired,
+        'tag': tag,
         'message_key': messageKey,
         'message': message,
         'title': title,
@@ -106,7 +108,8 @@ class BiometricX {
 
   /// Decrypt message using biometric.
   static Future<BiometricResult> decrypt({
-    required String biometricKey,
+    bool userAuthenticationRequired = true,
+    required String tag,
     required String messageKey,
     String title = 'Biometric Authentication',
     String subtitle = 'Enter biometric credentials to proceed',
@@ -117,7 +120,8 @@ class BiometricX {
   }) async {
     try {
       final String? message = await _channel.invokeMethod('decrypt', {
-        'biometric_key': biometricKey,
+        'user_authentication_required': userAuthenticationRequired,
+        'tag': tag,
         'message_key': messageKey,
         'title': title,
         'subtitle': subtitle,

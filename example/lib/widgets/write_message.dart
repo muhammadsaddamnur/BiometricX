@@ -26,7 +26,8 @@ class _WriteMessageState extends State<WriteMessage> {
     }
 
     final result = await BiometricX.encrypt(
-      biometricKey: app.biometricKey,
+      userAuthenticationRequired: true,
+      tag: app.tag,
       message: message,
       title: 'Biometric Permission',
       subtitle: 'Enter biometric credentials to save this message',

@@ -14,7 +14,7 @@ class AppState extends ChangeNotifier {
 
   AppScreenState get screenState => _screenState;
   String get currentMessage => _currentMessage;
-  String get biometricKey => _biometricKey;
+  String get tag => _biometricKey;
 
   bool get isList => screenState == AppScreenState.LIST;
   bool get isWrite => screenState == AppScreenState.WRITE;
