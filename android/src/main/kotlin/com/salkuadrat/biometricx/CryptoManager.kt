@@ -146,8 +146,11 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
         // If Secretkey exist for that keyName, grab and return it.
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
-        keyStore.getKey(keyName, null)?.let { return it as SecretKey }
-
+        keyStore.getKey(keyName, null)?.let { 
+            println("Secretkey exist")
+            return it as SecretKey 
+        }
+        println("Secretkey no-exist")
         // If not, generate a new one
         val keyGen = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
