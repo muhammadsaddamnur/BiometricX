@@ -1,18 +1,22 @@
 package com.salkuadrat.biometricx
 
+import android.R.attr.key
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Base64
 import androidx.annotation.RequiresApi
 import com.google.gson.Gson
 import java.nio.charset.Charset
 import java.security.KeyStore
+import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+
 
 interface CryptoManager {
     /**
@@ -105,12 +109,32 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
         keyName: String,
         userAuthenticationRequired: Boolean
     ): Cipher {
-        val cipher = getCipher()
-        val secretKey = getSecretKey(keyName, userAuthenticationRequired)
+        try {
+            val cipher = getCipher()
+            val secretKey = getSecretKey(keyName, userAuthenticationRequired)
 
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-        return cipher
+            /// check iv
+            val iv = context.getSharedPreferences(
+                BiometricxPlugin.SHARED_PREFS_NAME,
+                Context.MODE_PRIVATE
+            ).getString(keyName, null)
+
+            if (iv == null) {
+                println("iv not=exist")
+                val nonce = ByteArray(12)
+                SecureRandom().nextBytes(nonce)
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(128, nonce))
+            } else {
+                println("iv =exist $iv")
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(128, Base64.decode(iv, Base64.DEFAULT)))
+            }
+            return cipher
+        } catch (e: Exception) {
+            println("error cok " + e.toString())
+            throw Exception(e)
+        }
     }
+
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun getInitializedCipherForDecryption(
@@ -120,7 +144,7 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
     ): Cipher {
         val cipher = getCipher()
         val secretKey = getSecretKey(keyName, userAuthenticationRequired)
-
+        println(secretKey.toString());
         cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(128, initializationVector))
         return cipher
     }
@@ -128,10 +152,22 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
     override fun encryptData(message: String, cipher: Cipher): Ciphertext {
         val messageByte = message.toByteArray(Charset.forName("UTF-8"))
         val ciphertext = cipher.doFinal(messageByte)
+        println(
+            "iv enc " + Base64.encodeToString(
+                cipher.iv,
+                Base64.NO_WRAP
+            )
+        )
         return Ciphertext(ciphertext, cipher.iv)
     }
 
     override fun decryptData(ciphertext: ByteArray, cipher: Cipher): String {
+        println(
+            "iv dec " + Base64.encodeToString(
+                cipher.iv,
+                Base64.NO_WRAP
+            )
+        )
         val messageByte = cipher.doFinal(ciphertext)
         val message = String(messageByte, Charset.forName("UTF-8"))
         return message
@@ -146,11 +182,13 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
         // If Secretkey exist for that keyName, grab and return it.
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
-        keyStore.getKey(keyName, null)?.let { 
-            println("Secretkey exist")
-            return it as SecretKey 
+
+        keyStore.getKey(keyName, null)?.let {
+            println("Secretkey $keyName exist")
+            return it as SecretKey
         }
-        println("Secretkey no-exist")
+
+        println("Secretkey $keyName no-exist")
         // If not, generate a new one
         val keyGen = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
@@ -159,7 +197,7 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
 
         val keyGenParameterSpec = KeyGenParameterSpec.Builder(
             keyName,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && context.packageManager.hasSystemFeature(
@@ -173,6 +211,7 @@ private class CryptoManagerImpl(context: Context) : CryptoManager {
         keyGenParameterSpec.setEncryptionPaddings(ENCRYPTION_PADDING)
         keyGenParameterSpec.setUserAuthenticationRequired(userAuthenticationRequired)
         keyGenParameterSpec.setKeySize(KEY_SIZE)
+        keyGenParameterSpec.setRandomizedEncryptionRequired(false)
         keyGenParameterSpec.build()
 
         keyGen.init(

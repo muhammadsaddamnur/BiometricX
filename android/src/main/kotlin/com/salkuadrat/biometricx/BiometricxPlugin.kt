@@ -34,7 +34,7 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     companion object {
         private const val TAG = "BiometricxPlugin"
-        private const val SHARED_PREFS_NAME = "com.salkuadrat.biometricx"
+        const val SHARED_PREFS_NAME = "com.salkuadrat.biometricx"
     }
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -149,15 +149,21 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                 )
                             } else {
                                 /// save iv
-                                context.getSharedPreferences(
-                                    SHARED_PREFS_NAME,
-                                    Context.MODE_PRIVATE
-                                ).edit().putString(
-                                    tag, Base64.encodeToString(
-                                        ciphertext.initializationVector,
-                                        Base64.NO_WRAP
-                                    )
-                                ).apply()
+                                println("ini mau save")
+                                val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                                    .getString(tag, null)
+                                println("ini mau save iv $iv")
+                                if (iv == null) {
+                                    context.getSharedPreferences(
+                                        SHARED_PREFS_NAME,
+                                        Context.MODE_PRIVATE
+                                    ).edit().putString(
+                                        tag, Base64.encodeToString(
+                                            ciphertext.initializationVector,
+                                            Base64.NO_WRAP
+                                        )
+                                    ).apply()
+                                }
                             }
 
                             if (returnCipher) {
@@ -199,15 +205,21 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     )
                 } else {
                     /// save iv
-                    context.getSharedPreferences(
-                        SHARED_PREFS_NAME,
-                        Context.MODE_PRIVATE
-                    ).edit().putString(
-                        tag, Base64.encodeToString(
-                            ciphertext.initializationVector,
-                            Base64.NO_WRAP
-                        )
-                    ).apply()
+                    println("ini mau save")
+                    val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                        .getString(tag, null)
+                    println("ini mau save iv $iv")
+                    if (iv == null) {
+                        context.getSharedPreferences(
+                            SHARED_PREFS_NAME,
+                            Context.MODE_PRIVATE
+                        ).edit().putString(
+                            tag, Base64.encodeToString(
+                                ciphertext.initializationVector,
+                                Base64.NO_WRAP
+                            )
+                        ).apply()
+                    }
                 }
 
                 if (returnCipher) {
@@ -244,8 +256,12 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 messageKey
             )
         } else {
-            val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE).getString(tag, null)
+            val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(tag, null)
+            println("iv dari sharedpreference : $iv")
             Ciphertext(Base64.decode(cipherT, Base64.DEFAULT), Base64.decode(iv, Base64.DEFAULT))
+//            Ciphertext(Base64.decode(cipherT, Base64.DEFAULT), Base64.decode("87fTsKf27Tg/36v0", Base64.DEFAULT))
+
         }
 
 
@@ -272,7 +288,7 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                         ),
                         crypto,
                         { res ->
-                            ciphertext?.ciphertext?.let { ciphertext ->
+                            ciphertext.ciphertext.let { ciphertext ->
                                 res.cryptoObject?.cipher?.let { cipher ->
                                     val message = cryptoManager.decryptData(ciphertext, cipher)
                                     result.success(message)

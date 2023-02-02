@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:biometricx/biometricx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
@@ -68,9 +71,39 @@ class Home extends StatelessWidget {
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
           floatingActionButton: app.isList
-              ? FloatingActionButton(
-                  child: Icon(Icons.add_rounded),
-                  onPressed: app.write,
+              ? Row(
+                  children: [
+                    FloatingActionButton(
+                      child: Icon(Icons.add_rounded),
+                      // onPressed: app.write,
+                      onPressed: () async {
+                        log('message');
+                        var enc = await BiometricX.encrypt(
+                          userAuthenticationRequired: false,
+                          storeSharedPreferences: false,
+                          tag: '123',
+                          returnCipher: true,
+                          messageKey: '123',
+                          message: 'saddam',
+                        );
+                        log(enc.data.toString());
+                      },
+                    ),
+                    FloatingActionButton(
+                      child: Icon(Icons.mic),
+                      // onPressed: app.write,
+                      onPressed: () async {
+                        var dec = await BiometricX.decrypt(
+                          userAuthenticationRequired: false,
+                          storeSharedPreferences: false,
+                          tag: '1232',
+                          messageKey: '1232',
+                          cipherText: "50kkGZBiLdYtgam2j7Wn0uWiTs91Zg==",
+                        );
+                        log(dec.data.toString());
+                      },
+                    ),
+                  ],
                 )
               : null,
         ),
