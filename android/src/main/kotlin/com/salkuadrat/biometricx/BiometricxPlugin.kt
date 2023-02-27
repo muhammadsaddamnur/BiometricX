@@ -116,77 +116,77 @@ class BiometricxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             val cipher =
                 cryptoManager.getInitializedCipherForEncryption(tag, userAuthenticationRequired)
             if (userAuthenticationRequired) {
-//                val crypto = BiometricPrompt.CryptoObject(cipher)
-//
-//                biometricHelper.showBiometricPrompt(
-//                    activity!!,
-//                    BiometricPromptInfo(
-//                        title,
-//                        subtitle,
-//                        description,
-//                        negativeButtonText,
-//                        confirmationRequired,
-//                        deviceCredentialAllowed
-//                    ),
-//                    crypto,
-//                    { res ->
-//                        res.cryptoObject?.cipher?.let { cipher ->
-//                            val time = System.currentTimeMillis().toString()
-//                            val resultKey = when {
-//                                messageKey.isEmpty() -> "${tag}_${time}"
-//                                else -> messageKey
-//                            }
-//                            val ciphertext = cryptoManager.encryptData(message, cipher)
-//
-//                            if (storeSharedPreferences) {
-//                                /// save ciphertext
-//                                cryptoManager.saveCiphertext(
-//                                    context,
-//                                    ciphertext,
-//                                    SHARED_PREFS_NAME,
-//                                    Context.MODE_PRIVATE,
-//                                    resultKey
-//                                )
-//                            } else {
-//                                /// save iv
-//                                println("ini mau save")
-//                                val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-//                                    .getString(tag, null)
-//                                println("ini mau save iv $iv")
-//                                if (iv == null) {
-//                                    context.getSharedPreferences(
-//                                        SHARED_PREFS_NAME,
-//                                        Context.MODE_PRIVATE
-//                                    ).edit().putString(
-//                                        tag, Base64.encodeToString(
-//                                            ciphertext.initializationVector,
-//                                            Base64.NO_WRAP
-//                                        )
-//                                    ).apply()
-//                                }
-//                            }
-//
-//                            if (returnCipher) {
-//                                result.success(
-//                                    Base64.encodeToString(
-//                                        ciphertext.ciphertext,
-//                                        Base64.NO_WRAP
-//                                    )
-//                                )
-//                            } else {
-//                                result.success(resultKey)
-//                            }
-//                        } ?: run {
-//                            failed(result)
-//                        }
-//                    },
-//                    { errCode, errString ->
-//                        result.error(errCode.toString(), errString.toString(), null)
-//                    },
-//                    {
-//                        failed(result)
-//                    }
-//                )
+                val crypto = BiometricPrompt.CryptoObject(cipher)
+
+                biometricHelper.showBiometricPrompt(
+                    activity!!,
+                    BiometricPromptInfo(
+                        title,
+                        subtitle,
+                        description,
+                        negativeButtonText,
+                        confirmationRequired,
+                        deviceCredentialAllowed
+                    ),
+                    crypto,
+                    { res ->
+                        res.cryptoObject?.cipher?.let { cipher ->
+                            val time = System.currentTimeMillis().toString()
+                            val resultKey = when {
+                                messageKey.isEmpty() -> "${tag}_${time}"
+                                else -> messageKey
+                            }
+                            val ciphertext = cryptoManager.encryptData(message, cipher)
+
+                            if (storeSharedPreferences) {
+                                /// save ciphertext
+                                cryptoManager.saveCiphertext(
+                                    context,
+                                    ciphertext,
+                                    SHARED_PREFS_NAME,
+                                    Context.MODE_PRIVATE,
+                                    resultKey
+                                )
+                            } else {
+                                /// save iv
+                                println("ini mau save")
+                                val iv = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                                    .getString(tag, null)
+                                println("ini mau save iv $iv")
+                                if (iv == null) {
+                                    context.getSharedPreferences(
+                                        SHARED_PREFS_NAME,
+                                        Context.MODE_PRIVATE
+                                    ).edit().putString(
+                                        tag, Base64.encodeToString(
+                                            ciphertext.initializationVector,
+                                            Base64.NO_WRAP
+                                        )
+                                    ).apply()
+                                }
+                            }
+
+                            if (returnCipher) {
+                                result.success(
+                                    Base64.encodeToString(
+                                        ciphertext.ciphertext,
+                                        Base64.NO_WRAP
+                                    )
+                                )
+                            } else {
+                                result.success(resultKey)
+                            }
+                        } ?: run {
+                            failed(result)
+                        }
+                    },
+                    { errCode, errString ->
+                        result.error(errCode.toString(), errString.toString(), null)
+                    },
+                    {
+                        failed(result)
+                    }
+                )
             } else {
                 val time = System.currentTimeMillis().toString()
                 val resultKey = when {
